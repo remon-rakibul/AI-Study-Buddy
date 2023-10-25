@@ -1,5 +1,5 @@
 import streamlit as st
-from lc_functions import load_data, split_text, initialize_llm, generate_questions
+from lc_functions import load_data, split_text, initialize_llm, generate_questions, create_retrieval_qa_chain
 from tempfile import NamedTemporaryFile
 import os
 
@@ -47,3 +47,23 @@ if uploaded_file:
 
     if st.session_state['questions'] != 'empty':
         st.info(st.session_state['questions'])
+
+        st.session_state['questions_list'] = st.session_state['questions'].split('\n')
+
+        with st.form(key='my_form'):
+            st.session_state['questions_to_answer'] = st.multiselect(label='Select Questions to Answer', options=st.session_state['questions_list'])
+
+            submitted = st.form_submit_button('Generate Answer')
+
+            if submitted:
+                st.session_state['submitted'] = True
+
+        if st.session_state['submitted']:
+            with st.spinner('Generating Answers...'):
+                generate_answer_chain = create_retrieval_qa_chain(documents=documents_for_question_ans, llm=llm_question_ans)
+
+                for question in st.session_state['questions_to_answer']:
+                    ans = generate_answer_chain.run(question)
+
+                    st.write(f'Question: {question}')
+                    st.info(f'Answer: {ans}')
