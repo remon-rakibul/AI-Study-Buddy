@@ -40,7 +40,7 @@ if uploaded_file:
     #     text_from_pdf = load_data(tmp.name)
     
     # Removing uploaded file from disk
-    os.remove(f'files/{uploaded_file.name}')
+    # os.remove(f'files/{uploaded_file.name}')
     
     # st.write(text_from_pdf)
 
@@ -62,9 +62,9 @@ if uploaded_file:
     # os.remove(tmp.name)
     # Test
     # st.write('Number of documents for test: ', len(test))
-    st.write(documents_for_question_gen)
+    # st.write(documents_for_question_gen)
     st.write('Number of documents for question generation: ', len(documents_for_question_gen))
-    st.write(documents_for_question_ans)
+    # st.write(documents_for_question_ans)
     st.write('Number of documents for question answering: ', len(documents_for_question_ans))
 
     # init llm for question reneration
@@ -95,7 +95,16 @@ if uploaded_file:
                 generate_answer_chain = create_retrieval_qa_chain(documents=documents_for_question_ans, llm=llm_question_ans)
 
                 for question in st.session_state['questions_to_answer']:
-                    ans = generate_answer_chain.run(question)
+                    # ans = generate_answer_chain.run(question)
+                    response = generate_answer_chain(question)
 
                     st.write(f'Question: {question}')
-                    st.info(f'Answer: {ans}')
+                    st.info(f"Answer: {response['result']}")
+                    st.caption("Sources:")
+                    sources = set()
+                    for source in response['source_documents']:
+                        sources.add(source.metadata['source'])
+                    for source in sources:
+                        st.caption(source)
+                    st.divider()
+

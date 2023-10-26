@@ -102,6 +102,8 @@ def create_retrieval_qa_chain(documents, llm):
 
     retrieval_qa_chain = RetrievalQA.from_chain_type(llm=llm, 
                                                      chain_type="stuff", 
-                                                     retriever=retriever)
+                                                     retriever=retriever,
+                                                     return_source_documents=True,
+                                                     verbose=True)
 
     return retrieval_qa_chain
