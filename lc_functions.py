@@ -1,6 +1,6 @@
 from langchain.document_loaders import PyPDFLoader
 from PyPDF2 import PdfReader
-from langchain.text_splitter import TokenTextSplitter
+from langchain.text_splitter import TokenTextSplitter, RecursiveCharacterTextSplitter
 from langchain.vectorstores import Chroma
 from langchain.chat_models import ChatOpenAI
 from langchain.embeddings.openai import OpenAIEmbeddings
@@ -12,17 +12,23 @@ from prompts import PROMPT_QUESTIONS, REFINE_PROMPT_QUESTIONS
 def load_data(uploaded_file):
     '''
     loads uploaded file and
-    returns text
+    returns dict with page_content and source
     '''
+    # print(uploaded_file)
     pdf_reader = PdfReader(uploaded_file)
 
     text =""
 
     for page in pdf_reader.pages:
         text += page.extract_text()
-    return text
 
-def split_text(text, chunk_size, chunk_overlap):
+    data = {
+        'page_content': text,
+        'source': uploaded_file
+    }
+    return data
+
+def split_text(text, source, chunk_size, chunk_overlap):
     '''
     splits texts accroding to chunk size and overlap
     returns list of splitted texts
@@ -30,9 +36,27 @@ def split_text(text, chunk_size, chunk_overlap):
     text_splitter = TokenTextSplitter(model_name='gpt-3.5-turbo', chunk_size=chunk_size, chunk_overlap=chunk_overlap)
 
     text_chunk = text_splitter.split_text(text)
+    metadata = {
+        'source': source
+    }
 
-    document = [Document(page_content=t) for t in text_chunk]
+    document = [Document(page_content=t, metadata=metadata) for t in text_chunk]
+
     return document
+
+# def load_and_split_data(uploaded_file, chunk_size, chunk_overlap):
+#     '''
+#     loads uploaded file and splits doc accroding to chunk size and overlap
+#     returns list of splitted docs
+#     '''
+#     loader = PyPDFLoader(uploaded_file)
+#     pages = loader.load()
+#     # print(f'pages: {len(pages)}')
+#     text_splitter = TokenTextSplitter(chunk_size=chunk_size, chunk_overlap=chunk_overlap)
+#     r_splitter = RecursiveCharacterTextSplitter.from_tiktoken_encoder(separators=["\n\n", "\n", "(?<=\. )", " ", ""], chunk_size=chunk_size, chunk_overlap=chunk_overlap)
+#     docs = r_splitter.split_documents(pages)
+#     # print(f'docs: {len(docs)}')
+#     return docs
 
 def initialize_llm(model, temperature):
     llm = ChatOpenAI(model=model, temperature=temperature)
