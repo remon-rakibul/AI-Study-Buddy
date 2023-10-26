@@ -1,6 +1,7 @@
 import streamlit as st
-from lc_functions import load_data, split_text, initialize_llm, generate_questions, create_retrieval_qa_chain
+from lc_functions import load_data, split_text, initialize_llm, generate_questions, create_retrieval_qa_chain, load_data_multiple_docs, split_text_multiple_docs
 # from tempfile import NamedTemporaryFile
+import glob
 import os
 
 st.title('AI Study Buddy')
@@ -13,27 +14,61 @@ if 'questions' not in st.session_state:
 
 os.environ['OPENAI_API_KEY'] = st.text_input(label='OpenAI API Key', placeholder='Ex: sk-4ewt5jsdhfh4...', key='openai_api_key')
 
-uploaded_file = st.file_uploader(label='Upload Study Material', type=['pdf'])
+uploaded_files = st.file_uploader(label='Upload Study Material', type=['pdf'], accept_multiple_files=True)
 
-if uploaded_file:
+if uploaded_files:
     # st.write(uploaded_file.name)
-    bytes_data = uploaded_file.read()
+    def process_file_multi_docs(files):
+        '''
+        gets all files and writes bytes data in a directory
+        returns list of saved files
+        '''
 
-    _, file_extension = os.path.splitext(uploaded_file.name)
-    # st.write(_, file_extension)
+        # Create file directory
+        if not os.path.exists('files'):
+            os.makedirs('files')
 
-    # Create file directory
-    if not os.path.exists('files'):
-        os.makedirs('files')
+        for file in files:
+            bytes_data = file.read()
 
-    # Write uploaded file to disk
-    with open(f'files/{uploaded_file.name}', 'wb') as f:
-        f.write(bytes_data)
+            _, file_extension = os.path.splitext(file.name)
+            # st.write(_, file_extension)
+
+            # Write uploaded file to disk
+            with open(f'files/{file.name}', 'wb') as f:
+                f.write(bytes_data)
+
+        # get uploaded files path
+        file_paths = glob.glob('files/*')
+
+        return file_paths
+
+
+
+
+
+
+
+    # bytes_data = uploaded_file.read()
+
+    # _, file_extension = os.path.splitext(uploaded_file.name)
+    # # st.write(_, file_extension)
+
+    # # Create file directory
+    # if not os.path.exists('files'):
+    #     os.makedirs('files')
+
+    # # Write uploaded file to disk
+    # with open(f'files/{uploaded_file.name}', 'wb') as f:
+    #     f.write(bytes_data)
+
+    # Process files
+    files = process_file_multi_docs(uploaded_files)
 
     # Load uploaded file
-    data = load_data(f'files/{uploaded_file.name}')
-    text = data['page_content']
-    source = data['source']
+    data = load_data_multiple_docs(files)
+    # text = data['page_content']
+    # source = data['source']
 
     # with NamedTemporaryFile(delete=False) as tmp:
     #     tmp.write(bytes_data)
@@ -44,11 +79,11 @@ if uploaded_file:
     
     # st.write(text_from_pdf)
 
-    # Split doc for question gen
-    documents_for_question_gen = split_text(text=text, source=source, chunk_size=700, chunk_overlap=50)
+    # # Split doc for question gen
+    # documents_for_question_gen = split_text(text=text, source=source, chunk_size=700, chunk_overlap=50)
     
-    # Load and split text for question asnwering
-    documents_for_question_ans = split_text(text=text, source=source, chunk_size=400, chunk_overlap=50)
+    # # Load and split text for question asnwering
+    # documents_for_question_ans = split_text(text=text, source=source, chunk_size=400, chunk_overlap=50)
 
         # # Load and split doc for question gen
         # documents_for_question_gen = load_and_split_data(uploaded_file=tmp.name, chunk_size=700, chunk_overlap=50) 
@@ -56,13 +91,22 @@ if uploaded_file:
         # # Load and split text for question asnwering
         # documents_for_question_ans = load_and_split_data(uploaded_file=tmp.name, chunk_size=400, chunk_overlap=50)
 
+
+    # Split doc for question gen
+    documents_for_question_gen = split_text_multiple_docs(data=data, chunk_size=700, chunk_overlap=50)
+    
+    # Load and split text for question asnwering
+    documents_for_question_ans = split_text_multiple_docs(data=data, chunk_size=400, chunk_overlap=50)
+
+
+
     # test
     # test = load_and_split_data(uploaded_file=tmp.name, chunk_size=4000, chunk_overlap=100)
     # Removing uploaded file from file system
     # os.remove(tmp.name)
     # Test
     # st.write('Number of documents for test: ', len(test))
-    # st.write(documents_for_question_gen)
+    st.write(documents_for_question_gen)
     st.write('Number of documents for question generation: ', len(documents_for_question_gen))
     # st.write(documents_for_question_ans)
     st.write('Number of documents for question answering: ', len(documents_for_question_ans))

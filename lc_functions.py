@@ -28,6 +28,58 @@ def load_data(uploaded_file):
     }
     return data
 
+def load_data_multiple_docs(uploaded_files):
+    '''
+    loads uploaded file and
+    returns dict with page_content and source
+    '''
+    # print(uploaded_file)
+
+    data = {}
+
+    for index, uploaded_file in enumerate(uploaded_files):
+        pdf_reader = PdfReader(uploaded_file)
+
+        text =""
+
+        for page in pdf_reader.pages:
+            text += page.extract_text()
+
+        data[index] = {
+            'page_content': text,
+            'source': uploaded_file
+        }
+    
+    return data
+
+
+def split_text_multiple_docs(data, chunk_size, chunk_overlap):
+    '''
+    splits texts accroding to chunk size and overlap
+    returns list of splitted texts
+    '''
+    text_splitter = TokenTextSplitter(model_name='gpt-3.5-turbo', 
+                                      chunk_size=chunk_size, 
+                                      chunk_overlap=chunk_overlap)
+
+    document = []
+    
+    for i in data:
+        text_chunk = text_splitter.split_text(data[i]['page_content'])
+        metadata = {
+            'source': data[i]['source']
+        }
+
+        for t in text_chunk:
+            doc = Document(page_content=t, metadata=metadata)
+            document.append(doc)
+        # doc = [Document(page_content=t, metadata=metadata) for t in text_chunk]
+
+        # document.append(doc)
+
+    return document
+
+
 def split_text(text, source, chunk_size, chunk_overlap):
     '''
     splits texts accroding to chunk size and overlap
