@@ -1,5 +1,5 @@
 import streamlit as st
-from utils.document import process_file_multi_docs
+from utils.document import process_file_multi_docs, delete_uploaded_files
 from lc_functions import (load_data, 
                           split_text, 
                           initialize_llm, 
@@ -8,7 +8,7 @@ from lc_functions import (load_data,
                           load_data_multiple_docs, 
                           split_text_multiple_docs)
 # from tempfile import NamedTemporaryFile
-import glob
+import atexit
 import os
 
 # Show app title
@@ -25,7 +25,17 @@ if 'questions' not in st.session_state:
 os.environ['OPENAI_API_KEY'] = st.text_input(label='OpenAI API Key', placeholder='Ex: sk-4ewt5jsdhfh4...', key='openai_api_key')
 
 # Get uploaded files 
-uploaded_files = st.file_uploader(label='Upload Study Material', type=['pdf'], accept_multiple_files=True)
+uploaded_files = st.file_uploader(label='Upload Study Material', 
+                                  type=['pdf'], 
+                                  accept_multiple_files=True)
+
+# Show Delete Study Materials button
+delete_uploaded_files_btn = st.button("Delete Study Materials")
+
+# Check if btn is pressed
+if delete_uploaded_files_btn:
+    # Delete uploaded files
+    delete_uploaded_files()
 
 # Check if files are uploaded
 if uploaded_files:
@@ -56,7 +66,7 @@ if uploaded_files:
     # Check If questions is empty
     if st.session_state['questions'] == 'empty':
         # Generate questions
-        with st.spinner('Generating questions. Please wait.'):
+        with st.spinner('Generating questions. This may take a while. Please wait.'):
             st.session_state['questions'] = generate_questions(llm=llm_question_gen, chain_type='refine', documents=documents_for_question_gen)
 
     # Add generated question to session state
@@ -125,3 +135,5 @@ if uploaded_files:
 
                     # Show a divider at the end of each answer
                     st.divider()
+
+atexit.register(delete_uploaded_files)

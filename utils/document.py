@@ -25,3 +25,19 @@ def process_file_multi_docs(files):
         file_paths = glob.glob('files/*')
 
         return file_paths
+
+
+def delete_uploaded_files():
+    '''
+    deletes all files stored in files directory
+    '''
+
+    # get uploaded files path
+    file_paths = glob.glob('files/*')
+
+    if file_paths:
+        for file_path in file_paths:
+            try:
+                os.remove(file_path)
+            except Exception as e:
+                print(f"Failed to delete file: {e}")
