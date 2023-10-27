@@ -30,8 +30,8 @@ def load_data(uploaded_file):
 
 def load_data_multiple_docs(uploaded_files):
     '''
-    loads uploaded file and
-    returns dict with page_content and source
+    loads uploaded files and
+    returns dict with page_content and source of all files
     '''
     # print(uploaded_file)
 
@@ -131,7 +131,8 @@ def generate_questions(llm, chain_type, documents):
                                     chain_type=chain_type, 
                                     question_prompt=PROMPT_QUESTIONS, 
                                     refine_prompt=REFINE_PROMPT_QUESTIONS, 
-                                    verbose=True)
+                                    # verbose=True
+                                    )
 
     questions = qa_chain.run(documents)
 
@@ -156,6 +157,7 @@ def create_retrieval_qa_chain(documents, llm):
                                                      chain_type="stuff", 
                                                      retriever=retriever,
                                                      return_source_documents=True,
-                                                     verbose=True)
+                                                    #  verbose=True
+                                                     )
 
     return retrieval_qa_chain
