@@ -1,5 +1,6 @@
 import glob
 import os
+import shutil
 
 def process_file_multi_docs(files):
         '''
@@ -27,9 +28,10 @@ def process_file_multi_docs(files):
         return file_paths
 
 
-def delete_uploaded_files():
+def delete_uploaded_files_and_db():
     '''
     deletes all files stored in files directory
+    and deletes db directory
     '''
 
     # get uploaded files path
@@ -41,3 +43,4 @@ def delete_uploaded_files():
                 os.remove(file_path)
             except Exception as e:
                 print(f"Failed to delete file: {e}")
+    shutil.rmtree("db")

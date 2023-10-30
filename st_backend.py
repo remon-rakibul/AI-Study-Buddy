@@ -1,5 +1,5 @@
 import streamlit as st
-from utils.document import process_file_multi_docs, delete_uploaded_files
+from utils.document import process_file_multi_docs, delete_uploaded_files_and_db
 from lc_functions import (load_data, 
                           split_text, 
                           initialize_llm, 
@@ -35,7 +35,7 @@ delete_uploaded_files_btn = st.button("Delete Study Materials")
 # Check if btn is pressed
 if delete_uploaded_files_btn:
     # Delete uploaded files
-    delete_uploaded_files()
+    delete_uploaded_files_and_db()
 
 # Check if files are uploaded
 if uploaded_files:
@@ -136,4 +136,4 @@ if uploaded_files:
                     # Show a divider at the end of each answer
                     st.divider()
 
-atexit.register(delete_uploaded_files)
+atexit.register(delete_uploaded_files_and_db)
