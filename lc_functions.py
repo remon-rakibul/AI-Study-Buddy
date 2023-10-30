@@ -138,6 +138,29 @@ def generate_questions(llm, chain_type, documents):
 
     return questions
 
+def create_persistant_vectordb(persist_directory, documents, embeddings):
+    '''
+    creates persistant vector db
+    '''
+    # persist_directory = 'db'
+
+    # embeddings = OpenAIEmbeddings()
+
+    vector_db = Chroma.from_documents(documents=documents, 
+                                      embedding=embeddings, 
+                                      persist_directory=persist_directory)
+    
+    vector_db.persist()
+    vector_db = None
+
+def load_persistant_vectordb(persist_directory, embeddings):
+    '''
+    loads persistant vector db and returns it
+    '''
+    vector_db = Chroma(persist_directory=persist_directory, embedding_function=embeddings)
+
+    return vector_db
+
 def create_retrieval_qa_chain(documents, llm):
     '''
     stores documents to vector db and
@@ -147,10 +170,19 @@ def create_retrieval_qa_chain(documents, llm):
 
     embeddings = OpenAIEmbeddings()
 
-    vector_db = Chroma.from_documents(documents=documents, 
-                                      embedding=embeddings, 
-                                      persist_directory=persist_directory)
+    # vector_db = Chroma.from_documents(documents=documents, 
+    #                                   embedding=embeddings, 
+    #                                   persist_directory=persist_directory)
     
+    # vector_db.persist()
+    # vector_db = None
+
+    create_persistant_vectordb(persist_directory, documents, embeddings)
+
+    # vector_db = Chroma(persist_directory=persist_directory, embedding_function=embeddings)
+
+    vector_db = load_persistant_vectordb(persist_directory, embeddings)
+
     retriever = vector_db.as_retriever()
 
     retrieval_qa_chain = RetrievalQA.from_chain_type(llm=llm, 
