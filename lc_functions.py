@@ -34,10 +34,21 @@ def load_data_multiple_docs(uploaded_files):
     returns dict with page_content and source of all files
     '''
     # print(uploaded_file)
-
+    '''
+    Data Structure:
+    data = {
+        0: {
+            'page_content': str,
+            'source': str,
+            'page': int
+        }
+    }
+    '''
     data = {}
 
+    # Looping through uploaded_files
     for index, uploaded_file in enumerate(uploaded_files):
+        # Init 
         pdf_reader = PdfReader(uploaded_file)
 
         text =""
@@ -183,7 +194,7 @@ def create_retrieval_qa_chain(documents, llm):
 
     vector_db = load_persistant_vectordb(persist_directory, embeddings)
 
-    retriever = vector_db.as_retriever()
+    retriever = vector_db.as_retriever(search_kwargs={"k": 3})
 
     retrieval_qa_chain = RetrievalQA.from_chain_type(llm=llm, 
                                                      chain_type="stuff", 
