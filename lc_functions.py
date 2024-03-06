@@ -7,7 +7,9 @@ from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain.chains import RetrievalQA
 from langchain.chains.summarize import load_summarize_chain
 from langchain.docstore.document import Document
-from prompts import PROMPT_QUESTIONS, REFINE_PROMPT_QUESTIONS
+from prompts import PROMPT_QUESTIONS, REFINE_PROMPT_QUESTIONS, PROMPT_SUMMARY, REFINE_PROMPT_SUMMARY
+from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
+
 
 def load_data(uploaded_file):
     '''
@@ -123,12 +125,18 @@ def split_text(text, source, chunk_size, chunk_overlap):
 #     # print(f'docs: {len(docs)}')
 #     return docs
 
-def initialize_llm(model, temperature):
+def initialize_llm(model: str, temperature: float, stream: bool = False):
     '''
     initializes llm model with specified temperature
     returns llm model
     '''
-    llm = ChatOpenAI(model=model, 
+    if stream:
+        llm = ChatOpenAI(model=model, 
+                        temperature=temperature,
+                        streaming=stream,
+                        callbacks=[StreamingStdOutCallbackHandler()])
+    else:
+        llm = ChatOpenAI(model=model, 
                      temperature=temperature)
 
     return llm
@@ -142,13 +150,33 @@ def generate_questions(llm, chain_type, documents):
                                     chain_type=chain_type, 
                                     question_prompt=PROMPT_QUESTIONS, 
                                     refine_prompt=REFINE_PROMPT_QUESTIONS, 
-                                    verbose=True
+                                    # verbose=True
                                     )
 
     questions = qa_chain.run(documents)
     # for chunk in qa_chain.stream(documents):
     #     print(chunk.get('output_text'), flush=True)
     return questions
+
+
+def generate_summary(llm, chain_type, documents):
+    '''
+    generates summary based on given documents
+    returns summary
+    '''
+    qa_chain = load_summarize_chain(llm=llm, 
+                                    chain_type=chain_type, 
+                                    question_prompt=PROMPT_SUMMARY, 
+                                    refine_prompt=REFINE_PROMPT_SUMMARY, 
+                                    verbose=True
+                                    )
+
+    summary = qa_chain.stream(documents)
+    # for chunk in qa_chain.stream(documents):
+    #     print(chunk.get('output_text'), flush=True)
+    return summary
+
+
 
 def create_persistant_vectordb(persist_directory, documents, embeddings):
     '''

@@ -4,6 +4,7 @@ from lc_functions import (load_data,
                           split_text, 
                           initialize_llm, 
                           generate_questions, 
+                          generate_summary,
                           create_retrieval_qa_chain, 
                           load_data_multiple_docs, 
                           split_text_multiple_docs)
@@ -20,6 +21,7 @@ if 'questions' not in st.session_state:
     st.session_state['seperated_question_list'] = 'empty'
     st.session_state['questions_to_answers'] = 'empty'
     st.session_state['submitted'] = 'empty'
+    st.session_state['summary'] = 'empty'
 
 # Initialize openai api key
 os.environ['OPENAI_API_KEY'] = st.text_input(label='OpenAI API Key', placeholder='Ex: sk-4ewt5jsdhfh4...', key='openai_api_key')
@@ -31,6 +33,9 @@ uploaded_files = st.file_uploader(label='Upload Study Material',
 
 # Show Delete Study Materials button
 delete_uploaded_files_btn = st.button("Delete Study Materials")
+generate_questions_btn = st.button("Generate Questions")
+# Create submit button
+summary_gen = st.button('Generate Summary')
 
 # Check if btn is pressed
 if delete_uploaded_files_btn:
@@ -39,104 +44,135 @@ if delete_uploaded_files_btn:
 
 # Check if files are uploaded
 if uploaded_files:
+    if generate_questions_btn:
+        # Process files
+        files = process_file_multi_docs(uploaded_files)
 
-    # Process files
-    files = process_file_multi_docs(uploaded_files)
+        # Load uploaded file
+        data = load_data_multiple_docs(files)
 
-    # Load uploaded file
-    data = load_data_multiple_docs(files)
+        # Split doc for question gen
+        documents_for_question_gen = split_text_multiple_docs(data=data, chunk_size=700, chunk_overlap=50)
 
-    # Split doc for question gen
-    documents_for_question_gen = split_text_multiple_docs(data=data, chunk_size=700, chunk_overlap=50)
-    
-    # Load and split text for question asnwering
-    documents_for_question_ans = split_text_multiple_docs(data=data, chunk_size=400, chunk_overlap=50)
-
-    # st.write(documents_for_question_gen)
-    # st.write('Number of documents for question generation: ', len(documents_for_question_gen))
-    # st.write(documents_for_question_ans)
-    # st.write('Number of documents for question answering: ', len(documents_for_question_ans))
-
-    # init llm for question reneration
-    llm_question_gen = initialize_llm(model='gpt-3.5-turbo', temperature=0.4)
-
-    # init llm for question answering
-    llm_question_ans = initialize_llm(model='gpt-3.5-turbo', temperature=0.1)
-
-    # Check If questions is empty
-    if st.session_state['questions'] == 'empty':
-        # Generate questions
-        with st.spinner('Generating questions. This may take a while. Please wait.'):
-            st.session_state['questions'] = generate_questions(llm=llm_question_gen, chain_type='refine', documents=documents_for_question_gen)
-
-    # Add generated question to session state
-    if st.session_state['questions'] != 'empty':
+        # Split doc for summary gen
+        documents_for_summary_gen = split_text_multiple_docs(data=data, chunk_size=800, chunk_overlap=80)
         
-        # Show questions
-        st.info(st.session_state['questions'])
+        # Split docs for question asnwering
+        documents_for_question_ans = split_text_multiple_docs(data=data, chunk_size=400, chunk_overlap=50)
 
-        # Convert questions to a list of questions
-        st.session_state['questions_list'] = st.session_state['questions'].split('\n')
+        # st.write(documents_for_question_gen)
+        # st.write('Number of documents for question generation: ', len(documents_for_question_gen))
+        # st.write(documents_for_question_ans)
+        # st.write('Number of documents for question answering: ', len(documents_for_question_ans))
 
-        # Multiselect option for selecting questions
-        with st.form(key='my_form'):
+        # init llm for question reneration
+        llm_question_gen = initialize_llm(model='gpt-3.5-turbo', temperature=0.4)
 
-            # Add selected question to a session state
-            st.session_state['questions_to_answer'] = st.multiselect(label='Select Questions to Answer', options=st.session_state['questions_list'])
+        # init llm for question reneration
+        llm_summary_gen = initialize_llm(model='gpt-3.5-turbo', temperature=0.6, stream=True)
 
-            # Create submit button
-            submitted = st.form_submit_button('Generate Answer')
+        # init llm for question answering
+        llm_question_ans = initialize_llm(model='gpt-3.5-turbo', temperature=0.1)
 
-            # Check if questions are submitted for generating answer
-            if submitted:
+        # Check If questions is empty
+        if st.session_state['questions'] == 'empty':
+            # Generate questions
+            with st.spinner('Generating questions. This may take a while. Please wait.'):
+                st.session_state['questions'] = generate_questions(llm=llm_question_gen, chain_type='refine', documents=documents_for_question_gen)
 
-                # Change session state value
-                st.session_state['submitted'] = True
+        # Add generated question to session state
+        if st.session_state['questions'] != 'empty':
+            
+            # Show questions
+            st.info(st.session_state['questions'])
 
-        # Check if questions are submitted
-        if st.session_state['submitted']:
+            # Convert questions to a list of questions
+            st.session_state['questions_list'] = st.session_state['questions'].split('\n')
 
-            # Show spinner while generating answers
-            with st.spinner('Generating Answers. Please wait.'):
+            # Multiselect option for selecting questions
+            with st.form(key='my_form'):
 
-                # Generate answers for submitted questions
-                generate_answer_chain = create_retrieval_qa_chain(documents=documents_for_question_ans, llm=llm_question_ans)
+                # Add selected question to a session state
+                st.session_state['questions_to_answer'] = st.multiselect(label='Select Questions to Answer', options=st.session_state['questions_list'])
 
-                # Loop through all the questions
-                for question in st.session_state['questions_to_answer']:
-                    
-                    # Generate answer for each question
-                    # ans = generate_answer_chain.run(question)
-                    response = generate_answer_chain(question)
+                # Create submit button
+                submitted = st.form_submit_button('Generate Answer')
 
-                    # Show question
-                    st.write(f'Question: {question}')
+                # Check if questions are submitted for generating answer
+                if submitted:
 
-                    # Show answer
-                    st.info(f"Answer: {response['result']}")
+                    # Change session state value
+                    st.session_state['submitted'] = True
 
-                    # Show sources of answer
-                    st.caption("Sources:")
+            # Check if questions are submitted
+            if st.session_state['submitted']:
 
-                    # Initialize a set to keep unique sources                    
-                    sources = set()
+                # Show spinner while generating answers
+                with st.spinner('Generating Answers. Please wait.'):
 
-                    # Loop through sources
-                    for source in response['source_documents']:
+                    # Generate answers for submitted questions
+                    generate_answer_chain = create_retrieval_qa_chain(documents=documents_for_question_ans, llm=llm_question_ans)
 
-                        # Add source to initialized set
-                        sources.add(source.metadata['source'])
+                    # Loop through all the questions
+                    for question in st.session_state['questions_to_answer']:
+                        
+                        # Generate answer for each question
+                        # ans = generate_answer_chain.run(question)
+                        response = generate_answer_chain(question)
 
-                    # Loop through unique sources
-                    for source in sources:
+                        # Show question
+                        st.write(f'Question: {question}')
 
-                        # Show source
-                        st.caption(source)
+                        # Show answer
+                        st.info(f"Answer: {response['result']}")
 
-                    # Show first source document
-                    st.warning(response['source_documents'][0].page_content)
+                        # Show sources of answer
+                        st.caption("Sources:")
 
-                    # Show a divider at the end of each answer
-                    st.divider()
+                        # Initialize a set to keep unique sources                    
+                        sources = set()
+
+                        # Loop through sources
+                        for source in response['source_documents']:
+
+                            # Add source to initialized set
+                            sources.add(source.metadata['source'])
+
+                        # Loop through unique sources
+                        for source in sources:
+
+                            # Show source
+                            st.caption(source)
+
+                        # Show first source document
+                        st.warning(response['source_documents'][0].page_content)
+
+                        # Show a divider at the end of each answer
+                        st.divider()
+    
+    
+
+    # Check if questions are submitted for generating answer
+    if summary_gen:
+         # Process files
+        files = process_file_multi_docs(uploaded_files)
+
+        # Load uploaded file
+        data = load_data_multiple_docs(files)
+
+        # Split doc for summary gen
+        documents_for_summary_gen = split_text_multiple_docs(data=data, chunk_size=800, chunk_overlap=80)
+
+        # init llm for question reneration
+        llm_summary_gen = initialize_llm(model='gpt-3.5-turbo', temperature=0.6, stream=True)
+
+        # if st.session_state['summary'] == 'empty':
+            # st.session_state['summary'] = generate_summary(llm=llm_summary_gen, chain_type='refine', documents=documents_for_summary_gen)
+        res = generate_summary(llm=llm_summary_gen, chain_type='refine', documents=documents_for_summary_gen)
+            # st.write(type(res))
+        for i in res:
+            st.info(i.get('output_text'))
+            
+    summary_gen = False
 
 atexit.register(delete_uploaded_files_and_db)
