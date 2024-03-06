@@ -142,11 +142,12 @@ def generate_questions(llm, chain_type, documents):
                                     chain_type=chain_type, 
                                     question_prompt=PROMPT_QUESTIONS, 
                                     refine_prompt=REFINE_PROMPT_QUESTIONS, 
-                                    # verbose=True
+                                    verbose=True
                                     )
 
     questions = qa_chain.run(documents)
-
+    # for chunk in qa_chain.stream(documents):
+    #     print(chunk.get('output_text'), flush=True)
     return questions
 
 def create_persistant_vectordb(persist_directory, documents, embeddings):

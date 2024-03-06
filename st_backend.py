@@ -133,6 +133,9 @@ if uploaded_files:
                         # Show source
                         st.caption(source)
 
+                    # Show first source document
+                    st.warning(response['source_documents'][0].page_content)
+
                     # Show a divider at the end of each answer
                     st.divider()
 
