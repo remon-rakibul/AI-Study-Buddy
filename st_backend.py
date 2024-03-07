@@ -1,4 +1,7 @@
 import streamlit as st
+from fpdf import FPDF
+import base64
+from io import BytesIO
 from utils.document import process_file_multi_docs, delete_uploaded_files_and_db
 from lc_functions import (load_data, 
                           split_text, 
@@ -97,7 +100,7 @@ if uploaded_files:
 
                 # Create submit button
                 submitted = st.form_submit_button('Generate Answer')
-
+    
                 # Check if questions are submitted for generating answer
                 if submitted:
 
@@ -170,9 +173,32 @@ if uploaded_files:
             # st.session_state['summary'] = generate_summary(llm=llm_summary_gen, chain_type='refine', documents=documents_for_summary_gen)
         res = generate_summary(llm=llm_summary_gen, chain_type='refine', documents=documents_for_summary_gen)
             # st.write(type(res))
+        st.session_state['summary'] = ''
         for i in res:
-            st.info(i.get('output_text'))
-            
-    summary_gen = False
+            st.session_state['summary'] += i.get('output_text')
+            st.info(st.session_state['summary'])
+
+    export_as_pdf = st.button("Download Summary")
+
+    # Function to generate PDF from text
+    def text_to_pdf(text):
+        pdf = FPDF()
+        pdf.add_page()
+        pdf.set_font("Arial", size=12)
+        pdf.multi_cell(0, 10, text)
+        return pdf
+    
+    if export_as_pdf:
+        pdf = text_to_pdf(st.session_state['summary'])
+        pdf_output = BytesIO()
+        pdf_content = pdf.output(dest='S').encode('latin1')  # Get PDF content as byte string
+        pdf_output.write(pdf_content)  # Write the content to BytesIO object
+        pdf_output.seek(0)
+        b64 = base64.b64encode(pdf_output.read()).decode()
+
+        href = f'<a href="data:application/pdf;base64,{b64}" download="summary.pdf">Download PDF</a>'
+        st.markdown(href, unsafe_allow_html=True)
+
+    # summary_gen = False
 
 atexit.register(delete_uploaded_files_and_db)
