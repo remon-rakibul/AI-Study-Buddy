@@ -1,4 +1,4 @@
-from langchain.document_loaders import PyPDFLoader
+from langchain.document_loaders import PyPDFLoader, UnstructuredURLLoader, YoutubeLoader
 from PyPDF2 import PdfReader
 from langchain.text_splitter import TokenTextSplitter, RecursiveCharacterTextSplitter
 from langchain.vectorstores import Chroma
@@ -124,6 +124,22 @@ def split_text(text, source, chunk_size, chunk_overlap):
 #     docs = r_splitter.split_documents(pages)
 #     # print(f'docs: {len(docs)}')
 #     return docs
+
+def load_url(url):
+    """
+    loads url and extracts data from url
+    """
+    urls = [url]
+    loader = UnstructuredURLLoader(urls=urls)
+    data = loader.load()
+
+    return data
+
+def split_url_data(data, chunk_size, chunk_overlap):
+    text_splitter = TokenTextSplitter(chunk_size=chunk_size, chunk_overlap=chunk_overlap)
+    r_splitter = RecursiveCharacterTextSplitter(separators=["\n\n", "\n", "(?<=\. )", " ", ""], chunk_size=chunk_size, chunk_overlap=chunk_overlap)
+    docs = text_splitter.split_documents(data)
+    return docs  
 
 def initialize_llm(model: str, temperature: float, stream: bool = False):
     '''

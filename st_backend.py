@@ -10,7 +10,9 @@ from lc_functions import (load_data,
                           generate_summary,
                           create_retrieval_qa_chain, 
                           load_data_multiple_docs, 
-                          split_text_multiple_docs)
+                          split_text_multiple_docs,
+                          load_url,
+                          split_url_data)
 # from tempfile import NamedTemporaryFile
 import atexit
 import os
@@ -27,7 +29,8 @@ if 'questions' not in st.session_state:
     st.session_state['summary'] = 'empty'
 
 # Initialize openai api key
-os.environ['OPENAI_API_KEY'] = st.text_input(label='OpenAI API Key', placeholder='Ex: sk-4ewt5jsdhfh4...', key='openai_api_key')
+api = st.text_input(label='OpenAI API Key', placeholder='Ex: sk-4ewt5jsdhfh4...', key='openai_api_key')
+os.environ['OPENAI_API_KEY'] = api
 
 # Get uploaded files 
 uploaded_files = st.file_uploader(label='Upload Study Material', 
@@ -40,28 +43,45 @@ delete_uploaded_files_btn = st.button("Delete Study Materials")
 # Create submit button
 summary_gen = st.button('Generate Summary')
 
+url = st.text_input('Please enter a url')
+
+
 # Check if btn is pressed
 if delete_uploaded_files_btn:
     # Delete uploaded files
     delete_uploaded_files_and_db()
 
 # Check if files are uploaded
-if uploaded_files:
+if uploaded_files or url and api:
     # if generate_questions_btn:
-    # Process files
-    files = process_file_multi_docs(uploaded_files)
 
-    # Load uploaded file
-    data = load_data_multiple_docs(files)
+    if url:
+        url_data = load_url(url)
 
-    # Split doc for question gen
-    documents_for_question_gen = split_text_multiple_docs(data=data, chunk_size=700, chunk_overlap=50)
+        # Split doc for question gen
+        documents_for_question_gen = split_url_data(data=url_data, chunk_size=700, chunk_overlap=50)
 
-    # Split doc for summary gen
-    documents_for_summary_gen = split_text_multiple_docs(data=data, chunk_size=800, chunk_overlap=80)
-    
-    # Split docs for question asnwering
-    documents_for_question_ans = split_text_multiple_docs(data=data, chunk_size=400, chunk_overlap=50)
+        # Split doc for summary gen
+        documents_for_summary_gen = split_url_data(data=url_data, chunk_size=800, chunk_overlap=80)
+        
+        # Split docs for question asnwering
+        documents_for_question_ans = split_url_data(data=url_data, chunk_size=400, chunk_overlap=50)
+
+    elif uploaded_files:
+        # Process files
+        files = process_file_multi_docs(uploaded_files)
+
+        # Load uploaded file
+        file_data = load_data_multiple_docs(files)
+
+        # Split doc for question gen
+        documents_for_question_gen = split_text_multiple_docs(data=file_data, chunk_size=700, chunk_overlap=50)
+
+        # Split doc for summary gen
+        documents_for_summary_gen = split_text_multiple_docs(data=file_data, chunk_size=800, chunk_overlap=80)
+        
+        # Split docs for question asnwering
+        documents_for_question_ans = split_text_multiple_docs(data=file_data, chunk_size=400, chunk_overlap=50)
 
     # st.write(documents_for_question_gen)
     # st.write('Number of documents for question generation: ', len(documents_for_question_gen))
@@ -155,21 +175,21 @@ if uploaded_files:
     
     
     if summary_gen:
-        # Process files
-        # files = process_file_multi_docs(uploaded_files)
-        # st.write(files)
-        # Load uploaded file
-        # data = load_data_multiple_docs(files)
 
-        # Split doc for summary gen
-        documents_for_summary_gen = split_text_multiple_docs(data=data, chunk_size=800, chunk_overlap=80)
+        if url:
+            # Split doc for summary gen
+            documents_for_summary_gen = split_url_data(data=url_data, chunk_size=800, chunk_overlap=80)
+        elif uploaded_files:
+            # Split doc for summary gen
+            documents_for_summary_gen = split_text_multiple_docs(data=file_data, chunk_size=800, chunk_overlap=80)
 
-        # init llm for question reneration
+        # init llm for summary reneration
         llm_summary_gen = initialize_llm(model='gpt-3.5-turbo', temperature=0.6, stream=True)
 
         # if st.session_state['summary'] == 'empty':
             # st.session_state['summary'] = generate_summary(llm=llm_summary_gen, chain_type='refine', documents=documents_for_summary_gen)
-        res = generate_summary(llm=llm_summary_gen, chain_type='refine', documents=documents_for_summary_gen)
+        with st.spinner('Generating Summary. This might take a while. Please wait.'):
+            res = generate_summary(llm=llm_summary_gen, chain_type='refine', documents=documents_for_summary_gen)
             # st.write(type(res))
         st.session_state['summary'] = ''
         for i in res:
