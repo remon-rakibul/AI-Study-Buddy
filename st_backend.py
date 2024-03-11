@@ -12,7 +12,8 @@ from lc_functions import (load_data,
                           load_data_multiple_docs, 
                           split_text_multiple_docs,
                           load_url,
-                          split_url_data)
+                          split_url_data,
+                          load_youtube_url)
 # from tempfile import NamedTemporaryFile
 import atexit
 import os
@@ -44,6 +45,7 @@ delete_uploaded_files_btn = st.button("Delete Study Materials")
 summary_gen = st.button('Generate Summary')
 
 url = st.text_input('Please enter a url')
+v_url = st.text_input('Please enter a YouTube video url')
 
 
 # Check if btn is pressed
@@ -52,7 +54,7 @@ if delete_uploaded_files_btn:
     delete_uploaded_files_and_db()
 
 # Check if files are uploaded
-if uploaded_files or url and api:
+if uploaded_files or url or v_url and api:
     # if generate_questions_btn:
 
     if url:
@@ -66,6 +68,18 @@ if uploaded_files or url and api:
         
         # Split docs for question asnwering
         documents_for_question_ans = split_url_data(data=url_data, chunk_size=400, chunk_overlap=50)
+
+    if v_url:
+        v_url_data = load_url(v_url)
+
+        # Split doc for question gen
+        documents_for_question_gen = split_url_data(data=v_url_data, chunk_size=700, chunk_overlap=50)
+
+        # Split doc for summary gen
+        documents_for_summary_gen = split_url_data(data=v_url_data, chunk_size=800, chunk_overlap=80)
+        
+        # Split docs for question asnwering
+        documents_for_question_ans = split_url_data(data=v_url_data, chunk_size=400, chunk_overlap=50)
 
     elif uploaded_files:
         # Process files
@@ -163,9 +177,11 @@ if uploaded_files or url and api:
 
                     # Loop through unique sources
                     for source in sources:
-
-                        # Show source
-                        st.caption(source)
+                        if v_url_data:
+                            st.caption(f"https://www.youtube.com/watch?v={source}")
+                        else:
+                            # Show source
+                            st.caption(source)
 
                     # Show first source document
                     st.warning(response['source_documents'][0].page_content)
@@ -179,6 +195,9 @@ if uploaded_files or url and api:
         if url:
             # Split doc for summary gen
             documents_for_summary_gen = split_url_data(data=url_data, chunk_size=800, chunk_overlap=80)
+        elif v_url:
+            # Split doc for summary gen
+            documents_for_summary_gen = split_url_data(data=v_url_data, chunk_size=800, chunk_overlap=80)
         elif uploaded_files:
             # Split doc for summary gen
             documents_for_summary_gen = split_text_multiple_docs(data=file_data, chunk_size=800, chunk_overlap=80)

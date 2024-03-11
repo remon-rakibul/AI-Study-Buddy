@@ -135,11 +135,19 @@ def load_url(url):
 
     return data
 
+def load_youtube_url(v_url):
+    loader = YoutubeLoader.from_youtube_url(
+        v_url, add_video_info=False
+    )
+    data = loader.load()
+
+    return data
+
 def split_url_data(data, chunk_size, chunk_overlap):
     text_splitter = TokenTextSplitter(chunk_size=chunk_size, chunk_overlap=chunk_overlap)
     r_splitter = RecursiveCharacterTextSplitter(separators=["\n\n", "\n", "(?<=\. )", " ", ""], chunk_size=chunk_size, chunk_overlap=chunk_overlap)
     docs = text_splitter.split_documents(data)
-    return docs  
+    return docs
 
 def initialize_llm(model: str, temperature: float, stream: bool = False):
     '''
