@@ -177,7 +177,7 @@ if uploaded_files or url or v_url and api:
 
                     # Loop through unique sources
                     for source in sources:
-                        if v_url_data:
+                        if v_url:
                             st.caption(f"https://www.youtube.com/watch?v={source}")
                         else:
                             # Show source
